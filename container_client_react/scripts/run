@@ -1,0 +1,13 @@
+#!/bin/bash
+
+set -e
+
+PROJECT_ROOT="$(cd "$(dirname "$0")"; cd ..; pwd)"
+source ${PROJECT_ROOT}/config.sh
+
+docker run -it \
+  -p ${SERVER_PORT}:${SERVER_PORT} \
+  --volume ${PROJECT_ROOT}/app:/app \
+  --name=${PROJECT_NAME} \
+  --rm \
+  ${PROJECT_NAME}

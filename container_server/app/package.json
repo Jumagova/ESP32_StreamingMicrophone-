@@ -1,0 +1,31 @@
+{
+  "name": "audio-streaming",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js",
+    "start:dev": "nodemon app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "nodemon": "^2.0.21"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "fs": "^0.0.1-security",
+    "http": "^0.0.1-security",
+    "jnaudiostream": "^1.0.2",
+    "node-audiorecorder": "^3.0.0",
+    "react-feather": "^2.0.10",
+    "react-router-dom": "^6.8.2",
+    "socket.io": "^4.6.1",
+    "socket.io-client": "^4.6.1",
+    "socket.io-stream": "^0.9.1",
+    "throttle": "^1.0.3",
+    "uuid": "^9.0.0"
+  }
+}
