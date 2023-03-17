@@ -13,10 +13,7 @@
 // //   useEffect(() => {
 // //     const socket = io('http://localhost:3002');
 
-// //     socket.addEventListener('open', () => {
-// //       console.log('Connected to server!');
-// //       setConnected(true);
-// //     });
+// //     
 
 // //     socket.on('datos', (data) =>{
 // //       console.log(data);
@@ -103,7 +100,7 @@
 // //   const [connected, setConnected] = useState(false);
 // //   const socketRef = useRef(null);
 // //   let audio = document.getElementById('player')
-  
+
 // //   useEffect(() => {
 // //     const socket = io.connect('http://localhost:3002');
 
@@ -182,7 +179,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
 import io from 'socket.io-client';
-import ss from 'socket.io-stream';
+// import io from 'socket.io';
+// import ss from 'socket.io-stream';
 import wavDecoder from 'wav-decoder';
 
 
@@ -199,18 +197,41 @@ const Client = () => {
       setConnected(true);
     });
 
-    ss(socket).on('audio-stream', (stream, data) => {
-      const parts = [];
-      stream.on('data', function(chunk){
-          parts.push(chunk);
-      });
-      stream.on('end',  () => {
-          const blob = new Blob(parts, { type: 'audio/mp3' });
-          setAudio(blob);
-      });
+    // ss(socket).on('audio-stream', (stream, data) => {
+    //   const parts = [];
+    //   stream.on('data', function(chunk){
+    //       parts.push(chunk);
+    //   });
+    //   stream.on('end',  () => {
+    //       const blob = new Blob(parts, { type: 'audio/mp3' });
+    //       setAudio(blob);
+    //   });
+    // });
+    socket.addEventListener('open', () => {
+      console.log('Connected to server!');
+      setConnected(true);
+    });
+
+    const parts = [];
+
+
+
+    socket.on('audio_data', (chunk) => {
+      parts.push(chunk);
+    });
+
+    socket.on('audio_end', () => {
+      const blob = new Blob(parts, { type: 'audio/mp3' });
+      setAudio(blob);
     });
 
     socketRef.current = socket;
+
+    socket.addEventListener('close', () => {
+      console.log('Disconnected from server!');
+      setConnected(false);
+      // setAudio(null);
+    });
 
     return () => {
       if (socketRef.current) {
