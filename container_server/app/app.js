@@ -11,20 +11,7 @@ const io = new socketIO.Server(httpServer, {
 });
 
 io.on("connection", (socket) => {
-  // ...
   console.log('Client connected');
-
-  // socket.on('client-stream-request', (data) =>{
-  //   let stream = ss.createStream();
-  //   let filename = __dirname + './test_sounds/organfinale.mp3'
-  //   ss(socket).emit('audio-stream' , stream, {name:filename});
-  //   fs.createReadStream(filename).pipe(stream)
-  // });
-  // setInterval(()=> {
-  //   socket.emit('datos', 'dato prueba')
-  // }, 3000);
-  
-
   const audioStream = fs.createReadStream('./test_sounds/CantinaBand60.wav');
 
   audioStream.on('error', (err) => {

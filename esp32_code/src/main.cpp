@@ -42,4 +42,3 @@ void loop()
   // Wait for a moment before sending the next data
   delay(500);
 }
-
