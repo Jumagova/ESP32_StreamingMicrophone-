@@ -1,3 +1,12 @@
 {
-    "stm32-for-vscode.armToolchainPath": false
+    "stm32-for-vscode.armToolchainPath": false,
+    "files.associations": {
+        "array": "cpp",
+        "deque": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "vector": "cpp",
+        "string_view": "cpp",
+        "initializer_list": "cpp"
+    }
 }

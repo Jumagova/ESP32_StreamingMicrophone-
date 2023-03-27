@@ -1,6 +1,6 @@
 const net = require('net');
 const os = require('os');
-const Speaker = require('fs');
+const Speaker = require('speaker');
 
 const server = net.createServer(socket => {
     console.log('Client connected');
@@ -44,8 +44,8 @@ const server = net.createServer(socket => {
     });
 });
 
-server.listen(8080, () => {
-    console.log('Server is listening on port 8080');
+server.listen(3030, () => {
+    console.log('Server is listening on port 3030');
 
     // Get the IP address of the server
     const interfaces = os.networkInterfaces();
