@@ -1,8 +1,10 @@
-const net = require('net');
 const os = require('os');
 const Speaker = require('speaker');
+const app = require('express')();
+const http = require('http').createServer(app);
+const io = require('socket.io')(http);
 
-const server = net.createServer(socket => {
+io.on('connection', socket => {
     console.log('Client connected');
 
     let speaker;
@@ -12,7 +14,7 @@ const server = net.createServer(socket => {
         speaker.end();
     });
 
-    socket.on('audio', (data) => {
+    socket.on('audio', (audio) => {
         //console.log('Received data: ', data);
 
         // Play the audio data using the speaker library 
@@ -33,7 +35,7 @@ const server = net.createServer(socket => {
         //     });
         // }
 
-        speaker.write(data);
+        speaker.write(audio);
     });
 
     socket.on('data', (data) => {
@@ -41,7 +43,7 @@ const server = net.createServer(socket => {
         console.log(`Received message from ESP32: ${message}`);
     });
 
-    socket.on('end', () => {
+    socket.on('disconnect', () => {
         console.log('Client disconnected');
         if (speaker) {
             speaker.end();
@@ -49,7 +51,7 @@ const server = net.createServer(socket => {
     });
 });
 
-server.listen(3030, () => {
+http.listen(3030, () => {
     console.log('Server is listening on port 3030');
 
     // Get the IP address of the server

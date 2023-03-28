@@ -9,6 +9,7 @@
 #include <driver/adc.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_GFX.h>
+#include <ArduinoJson.h>
 
 // Define Wifi Object
 WiFiClient client;
@@ -16,11 +17,10 @@ WiFiClient client;
 // Wifi Credentials
 const char *ssid = "Coworking-Rosales";
 const char *password = "MoniPepe_4327";
-#define SSID "Coworking-Rosales"
-#define PASSWORD "MoniPepe_4327"
+
 // Server connection parameters
-const char *server = "192.168.1.30";
-const int port = 8080;
+const char *server = "192.168.1.13";
+const int port = 3030;
 
 //  Altimeter Address 0x77
 #define ALTIMETER_I2C_ADDRESS 0X77
@@ -39,6 +39,7 @@ Adafruit_FONA fona = Adafruit_FONA(FONA_RST);
 
 // Altimeter Parameters
 Adafruit_BMP3XX bmp;
+
 // const float seaLevelPressurehPa = 1013.25;
 
 //  Display Address 0x3D
@@ -70,6 +71,10 @@ const int ldoPin = 21;
 const int buttonPin = 0;
 int buttonState = 0;
 
+// Timestamp data sent to server
+const unsigned long interval = 1000; // 5 seconds
+unsigned long previousMillis = 0;
+
 void sendAudioData(bool transmitFlag);
 void I2CScanner(void);
 void adquireGPSData(void);
@@ -79,7 +84,6 @@ void IRAM_ATTR onTimer(void);
 void panicButton(void);
 void beginLocationGpsAndGsmTriangulation(void);
 void adquireGPSData(float &latitude, float &longitude, float &altitude);
-void adquirePressureDataforAltitudeCalculation(float &pressure, float &temperature);
 void adquirePressureDataforAltitudeCalculation(float &pressure, float &temperature);
 void connectWifi(void);
 void connectServer(void);
@@ -93,8 +97,16 @@ void setup()
   // I2C Initialization
   Wire.begin();
 
+  // Setup Altimeter Parameters
+  bmp.begin_I2C(ALTIMETER_I2C_ADDRESS);
+  bmp.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
+  bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
+  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
+  bmp.setOutputDataRate(BMP3_ODR_50_HZ);
+
   // Setup GPS Parameters
   beginLocationGpsAndGsmTriangulation();
+
   // Turn on second LDO regulator for microphone
   pinMode(ldoPin, OUTPUT);
   digitalWrite(ldoPin, HIGH);
@@ -112,13 +124,6 @@ void setup()
   timerAttachInterrupt(timer, &onTimer, true);
   timerAlarmWrite(timer, 125, true);
   timerAlarmEnable(timer);
-
-  // Setup Altimeter Parameters
-  bmp.begin_I2C(ALTIMETER_I2C_ADDRESS);
-  bmp.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
-  bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
-  bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
-  bmp.setOutputDataRate(BMP3_ODR_50_HZ);
 
   // Setup Display
   display.begin(SSD1306_SWITCHCAPVCC, DISPLAY_I2C_ADDRESS);
@@ -145,12 +150,53 @@ void setup()
 
 void loop()
 {
+  if (debug)
+  {
+    I2CScanner();
+  }
   connectWifi();
   connectServer();
   if (panicMode)
   {
     sendAudioData(transmitNow);
-    
+    float latitude = 0.0;
+    float longitude = 0.0;
+    float altitude = 0.0;
+    float pressure = bmp.pressure;
+    float temperature = bmp.temperature;
+    adquireGPSData(latitude, longitude, altitude);
+    // adquirePressureDataforAltitudeCalculation(pressure, temperature);
+    char data[100];
+    sprintf(data, "Latitude: %f, longitude: %f, altitude: %f,temperature: %f,pressure: %f", latitude, longitude, altitude, pressure, temperature);
+    Serial.println(data);
+
+    unsigned long currentMillis = millis();
+    if (currentMillis - previousMillis >= interval)
+    {
+      previousMillis = currentMillis;
+
+      // Create JSON message
+      DynamicJsonDocument doc(1024);
+      doc["latitude"] = latitude;
+      doc["longitude"] = longitude;
+      doc["altitiude"] = altitude;
+      doc["pressure"] = pressure;
+      doc["temperature"] = temperature;
+      String message;
+      serializeJson(doc, message);
+
+      // Send message to server
+      // client.write(message.c_str(), message.length());
+      // Send JSON message to 'data' event on the server for a named socket 'data'
+      client.printf("emit('data', '%s').to('data')\n", message.c_str());
+    }
+  }
+  else
+  {
+    if (debug)
+    {
+      Serial.println("Panic Button is stand by mode");
+    }
   }
 }
 
@@ -187,12 +233,11 @@ void updateDisplay(void)
 
 void sendAudioData(bool transmitFlag)
 {
-  connectWifi();
-
   if (transmitNow)
   {
     transmitNow = false;
-    client.write(transmitBuffer, sizeof(transmitBuffer));
+    // client.write(transmitBuffer, sizeof(transmitBuffer));
+    client.printf("emit('audio', '%s').to('audio')\n", transmitBuffer);
     client.flush();
   }
 }
@@ -301,7 +346,7 @@ void adquireGPSData(float &latitude, float &longitude, float &altitude)
       Serial.println(alt);
     }
   }
-  else 
+  else
   {
     if (debug)
     {
@@ -350,12 +395,17 @@ void adquireGPSData(float &latitude, float &longitude, float &altitude)
   }
 }
 
-
 void adquirePressureDataforAltitudeCalculation(float &pressure, float &temperature)
 {
-
+  if (!bmp.performReading())
+  {
+    if (debug)
+    {
+      Serial.println("Failed to perform reading :(");
+    }
+    return;
+  }
   temperature = bmp.temperature;
-
   pressure = bmp.pressure / 100;
 
   if (debug)
@@ -381,17 +431,20 @@ void connectWifi(void)
   }
   if (debug)
   {
-    Serial.println("Connecting to WiFi");
+    Serial.println("Connected to WiFi");
   }
 }
 
 void connectServer(void)
 {
-  while (!client.connect(server, port))
+  if (!client.connected())
   {
-    if (debug)
+    while (!client.connect(server, port))
     {
-      Serial.println("Connecting to Server");
+      if (debug)
+      {
+        Serial.println("Connecting to Server");
+      }
     }
   }
   if (debug)
